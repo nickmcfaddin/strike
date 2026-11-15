@@ -14,6 +14,8 @@ const categoryColors = {
   Throwing: "#d97706",
   Film: "#7c3aed",
   "Rehab / Mobility": "#db2777",
+  "Other Sports": "#2563eb",
+  HIIT: "#dc2626",
 };
 
 function Dashboard({

@@ -5,6 +5,8 @@ export const categories = [
   "Throwing",
   "Film",
   "Rehab / Mobility",
+  "Other Sports",
+  "HIIT",
 ];
 
 export const players = [
