@@ -37,7 +37,9 @@ function Dashboard({
 
   const totalHours = (totalMinutes / 60).toFixed(1);
 
-  const categories = Object.entries(categoryTotals);
+  const categories = Object.entries(categoryTotals).sort(
+    ([, minutesA], [, minutesB]) => minutesB - minutesA
+  );
 
   return (
     <div className="page">
@@ -113,8 +115,7 @@ function Dashboard({
                       className="progress-fill"
                       style={{
                         width: `${percentage}%`,
-                        backgroundColor:
-                          categoryColors[category],
+                        backgroundColor: categoryColors[category] || "#64748b",
                       }}
                     />
                   </div>
