@@ -1,17 +1,53 @@
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { categories } from "../data/sampleData";
 
+const MANITOBA_TIME_ZONE = "America/Winnipeg";
+
+function getManitobaDate() {
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MANITOBA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = dateParts.find((part) => part.type === "year").value;
+  const month = dateParts.find((part) => part.type === "month").value;
+  const day = dateParts.find((part) => part.type === "day").value;
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatManitobaDate(date) {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(
+    undefined,
+    {
+      timeZone: MANITOBA_TIME_ZONE,
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }
+  );
+}
+
 function LogTraining({ players, onAddSession }) {
+  const confirmationDialog = useRef(null);
   const [playerId, setPlayerId] = useState(players[0].id);
   const [category, setCategory] = useState(categories[0]);
   const [duration, setDuration] = useState("60");
-  const [date, setDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [date, setDate] = useState(getManitobaDate);
   const [notes, setNotes] = useState("");
 
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
+
+  useEffect(() => {
+    if (confirmation && confirmationDialog.current) {
+      confirmationDialog.current.showModal();
+    }
+  }, [confirmation]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -37,7 +73,8 @@ function LogTraining({ players, onAddSession }) {
     }
 
     try {
-      setMessage("Submitting...");
+      setMessage("");
+      setIsSubmitting(true);
 
       await onAddSession({
         playerId: Number(playerId),
@@ -47,17 +84,26 @@ function LogTraining({ players, onAddSession }) {
         notes,
       });
 
-      setMessage("Training session successfully saved!");
+      setConfirmation({
+        playerName: players.find(
+          (player) => player.id === Number(playerId)
+        )?.name || "Selected player",
+        category,
+        duration: durationNumber,
+        date,
+        notes,
+      });
 
       setDuration("60");
       setNotes("");
-
     } catch (error) {
       console.error(error);
 
       setMessage(
         error.message || "Unable to submit training."
       );
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -185,15 +231,69 @@ function LogTraining({ players, onAddSession }) {
           <button
             className="submit-button"
             type="submit"
+            disabled={isSubmitting}
           >
-            Submit Training
+            {isSubmitting ? "Submitting..." : "Submit Training"}
           </button>
 
           {message && (
-            <p className="form-message">{message}</p>
+            <p className="form-message" role="alert">{message}</p>
           )}
         </form>
       </div>
+
+      {confirmation && (
+        <dialog
+          ref={confirmationDialog}
+          className="training-confirmation"
+          aria-labelledby="training-confirmation-title"
+          aria-describedby="training-confirmation-description"
+          onClose={() => setConfirmation(null)}
+        >
+          <div className="confirmation-content">
+            <h2 id="training-confirmation-title">
+              Training recorded
+            </h2>
+            <p id="training-confirmation-description">
+              Your training entry has been saved.
+            </p>
+
+            <dl className="confirmation-details">
+              <div>
+                <dt>Player</dt>
+                <dd>{confirmation.playerName}</dd>
+              </div>
+              <div>
+                <dt>Category</dt>
+                <dd>{confirmation.category}</dd>
+              </div>
+              <div>
+                <dt>Duration</dt>
+                <dd>{confirmation.duration} minutes</dd>
+              </div>
+              <div>
+                <dt>Date</dt>
+                <dd>{formatManitobaDate(confirmation.date)}</dd>
+              </div>
+              <div>
+                <dt>Notes</dt>
+                <dd>
+                  {confirmation.notes.trim() || "No notes"}
+                </dd>
+              </div>
+            </dl>
+
+            <button
+              className="submit-button confirmation-button"
+              type="button"
+              autoFocus
+              onClick={() => confirmationDialog.current.close()}
+            >
+              Okay, continue
+            </button>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }
